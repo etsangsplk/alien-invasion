@@ -28,4 +28,14 @@ I couldn't really test this portion formally because it relied on randomness, bu
 
 ## How to Run
 
-`./citymap numAliens map.txt`
+Command line program in citymap directory:
+`./citymap numAliens filename`
+
+```
+❯ ./citymap 4 map.txt
+Bee has been destroyed by alien 1, alien 2, and alien 4!
+Bar has been destroyed by alien 4, alien 2, and alien 1!
+Foo has been destroyed by alien 3, and alien 3!
+Baz has been destroyed by alien 3, alien 3, and alien 3!
+```
+
