@@ -40,10 +40,10 @@ func TestAdd(t *testing.T) {
 	// fillCityAndRemove()
 	var cm CityMap
 	cm.ReadCityMapFile("map.txt")
-	fmt.Println("===Map From Map.txt Added===")
-	cm.PrintMap()
+	// fmt.Println("===Map From Map.txt Added===")
+	// cm.PrintMap()
 	cm.RunAlienSim(2)
 	fmt.Println("\n===Map after Alien Sim ===")
-	cm.PrintMap()
+	// cm.PrintMap()
 
 }

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/deckarep/golang-set"
 )
 
 // CityNode is a node in our CityMap
@@ -251,12 +253,19 @@ func makeRange(min, max int) []int {
 // on the CityMap. Assumes that more than two aliens can be in a city
 // once
 func (cm *CityMap) RunAlienSim(numAliens int) {
-	nodesToOccupants := make(map[*CityNode][]int)
+	nodesToOccupants := make(map[*CityNode]mapset.Set)
 	// Assign aliens to random cities
 	aliens := makeRange(1, numAliens)
 	for _, a := range aliens {
 		randomCity := cm.PickRandomCity()
-		nodesToOccupants[randomCity] = append(nodesToOccupants[randomCity], a)
+		_, ok := nodesToOccupants[randomCity]
+		if ok {
+			nodesToOccupants[randomCity].Add(a)
+		} else {
+			occupantSet := mapset.NewSet()
+			occupantSet.Add(a)
+			nodesToOccupants[randomCity] = occupantSet
+		}
 		// fmt.Println(nodesToOccupants)
 	}
 
@@ -266,15 +275,27 @@ func (cm *CityMap) RunAlienSim(numAliens int) {
 		for city, cityOccupants := range nodesToOccupants {
 			// If those cities have neighbors, we can move the occcupants one step
 			if cm.hasNeighbors(city) {
-				for i := len(cityOccupants) - 1; i >= 0; i-- {
+				it := cityOccupants.Iterator()
+				occcupantsToRemove := make([]interface{}, 0)
+				for cityOccupant := range it.C {
 					neighborCity := cm.PickRandomNeighbor(city)
 					// fmt.Println(neighborCity)
 					// Update the neighboring city's slice of occupants
 					// fmt.Println(nodesToOccupants[neighborCity])
-					nodesToOccupants[neighborCity] = append(nodesToOccupants[neighborCity], cityOccupants[i])
+					_, ok := nodesToOccupants[neighborCity]
+					if ok {
+						nodesToOccupants[neighborCity].Add(cityOccupant)
+					} else {
+						occupantSet := mapset.NewSet()
+						occupantSet.Add(cityOccupant)
+						nodesToOccupants[neighborCity] = occupantSet
+					}
 					// Remove the alien from the present city slice of occupants
-					cityOccupants = append(cityOccupants[:i], cityOccupants[i+1:]...)
-					// nodesToOccupants[city] = cityOccupants // Update (is this needed?)
+					occcupantsToRemove = append(occcupantsToRemove, cityOccupant)
+				}
+
+				for removedAlien := range occcupantsToRemove {
+					cityOccupants.Remove(removedAlien)
 				}
 			}
 		}
@@ -283,14 +304,18 @@ func (cm *CityMap) RunAlienSim(numAliens int) {
 		// we must evaluate the current state and delete any CityNodes
 		// with multiple occupants
 		for city, cityOccupants := range nodesToOccupants {
-			if len(cityOccupants) > 1 {
+			if cityOccupants.Cardinality() > 1 {
 				fmt.Print(city.name, " has been destroyed by")
-				for occupantIdx, occupant := range cityOccupants {
-					if occupantIdx == len(cityOccupants)-1 {
-						fmt.Printf(" and alien %v!\n", occupant)
+				it := cityOccupants.Iterator()
+
+				count := 0
+				for cityOccupant := range it.C {
+					if count == cityOccupants.Cardinality()-1 {
+						fmt.Printf(" and alien %v!\n", cityOccupant)
 					} else {
-						fmt.Printf(" alien %v,", occupant)
+						fmt.Printf(" alien %v,", cityOccupant)
 					}
+					count++
 				}
 				cm.RemoveCity(city.name)
 				delete(nodesToOccupants, city)
